@@ -1,4 +1,3 @@
-#include "ros/ros.h"
 #include "genie_nano/cordef.h"
 #include "GenApi/GenApi.h"					//!< GenApi lib definitions.
 #include "genie_nano/gevapi.h"				//!< GEV lib definitions.
@@ -6,16 +5,23 @@
 #include "genie_nano/X_Display_utils.h"
 #include "genie_nano/FileUtil.h"
 #include <sched.h>
-
 #include <iostream>
 
-#define LOOP_TIME   			0.5
+#include "ros/ros.h"
+
+#include <cv_bridge/cv_bridge.h>
+#include <image_transport/image_transport.h>
+#include <sensor_msgs/Image.h>
+#include <sensor_msgs/image_encodings.h>
+#include <sensor_msgs/CameraInfo.h>
+
+#define LOOP_TIME   			0.1
 
 #define MAX_NETIF				8
 #define MAX_CAMERAS_PER_NETIF	32
 #define MAX_CAMERAS				(MAX_NETIF * MAX_CAMERAS_PER_NETIF)
 
-#define NUM_BUF					8
+#define NUM_BUF					32
 
 #define ENABLE_BAYER_CONVERSION 1
 
@@ -64,8 +70,8 @@ int main (int argc, char **argv){
 	ros::init(argc, argv, "test_cam");
 	ros::NodeHandle nh;
 
-	//ros::Rate loop_rate(1/LOOP_TIME);
-	ros::Rate loop_rate(0.5);
+	ros::Rate loop_rate(1/LOOP_TIME);
+	//ros::Rate loop_rate(0.5);
 
 	double count = 0;
 	char c;
@@ -80,9 +86,7 @@ int main (int argc, char **argv){
 	X_VIEW_HANDLE  View = NULL;
 	MY_CONTEXT context = {0};
 	pthread_t  tid;
-	char c_key;
 	int done = FALSE;
-	int turboDriveAvailable = 0;
 	char uniqueName[128];
 	uint32_t macLow = 0; // Low 32-bits of the mac address (for file naming).
 
@@ -176,6 +180,7 @@ int main (int argc, char **argv){
 				}
 
 				if(status == 0){
+					
 					// Set up a grab/transfer from this camera
 					cout << "Camera ROI set for" << endl;
 					cout << "Height = " << height << endl;
@@ -195,7 +200,7 @@ int main (int argc, char **argv){
 						memset(bufAddress[i], 0, size);
 					}
 					//status = GevInitializeTransfer( handle, Asynchronous, size, numBuffers, bufAddress);
-					status = GevInitializeTransfer( handle, SynchronousNextEmpty, size, numBuffers, bufAddress);
+					status = GevInitializeTransfer( handle, Asynchronous, size, numBuffers, bufAddress);
 					// Create an image display window.
 					// This works best for monochrome and RGB. The packed color formats (with Y, U, V, etc..) require 
 					// conversion as do, if desired, Bayer formats.
@@ -240,23 +245,6 @@ int main (int argc, char **argv){
 					context.exit = FALSE;
 		   			pthread_create(&tid, NULL, ImageDisplayThread, &context);
 
-					// See if TurboDrive is available.
-					turboDriveAvailable = IsTurboDriveAvailable(handle);
-					if(turboDriveAvailable){
-						UINT32 val = 1;
-						GevGetFeatureValue(handle, "transferTurboMode", &type, sizeof(UINT32), &val);
-						val = (val == 0) ? 1 : 0;
-						GevSetFeatureValue(handle, "transferTurboMode", sizeof(UINT32), &val);
-						GevGetFeatureValue(handle, "transferTurboMode", &type, sizeof(UINT32), &val);
-						if (val == 1){
-							cout << "TurboMode Enabled" << endl;
-						}else{
-							cout << "TurboMode Disabled" << endl;
-						}
-					}else{
-						cout << "*** TurboDrive is NOT Available for this device/pixel format combination ***" << endl;
-					}
-
 					for(i = 0; i < numBuffers; i++){
 						memset(bufAddress[i], 0, size);
 					}
@@ -264,14 +252,14 @@ int main (int argc, char **argv){
 					if(status != 0){
 						cout << "Error starting grab - " << status << endl; 
 					}
-
 					while(ros::ok()){
-						
 						ros::spinOnce();
 						loop_rate.sleep();
+						cout << sizeof(context.format) << endl;
 						count = count + LOOP_TIME;
 						cout << count << endl;
 					}
+					
 					GevStopTransfer(handle);
 					done = TRUE;
 					context.exit = TRUE;
@@ -318,6 +306,9 @@ char GetKey(){
 void * ImageDisplayThread( void *context){
 	MY_CONTEXT *displayContext = (MY_CONTEXT *)context;
 
+	ros::NodeHandle nh;
+	ros::Publisher pub_image = nh.advertise<sensor_msgs::Image>("/genie_cam/image_raw",100);
+
 	if (displayContext != NULL)
 	{
    	unsigned long prev_time = 0;
@@ -350,6 +341,19 @@ void * ImageDisplayThread( void *context){
 							//(Note : Not all formats can be displayed properly at this time (planar, YUV*, 10/12 bit packed).
 							ConvertGevImageToX11Format( img->w, img->h, gev_depth, img->format, img->address, \
 													displayContext->depth, displayContext->format, displayContext->convertBuffer);
+							void* temp = displayContext->convertBuffer;
+							unsigned char* image_data = (unsigned char*)displayContext->convertBuffer;;
+							cout << (int)(image_data[0]) << ", " << (int)(image_data[1]) << endl;
+							//cout << image_data[0];
+							
+							sensor_msgs::Image image_msg;
+							image_msg.height = img->h;
+							image_msg.width = img->w;
+							image_msg.encoding = "bayer_rggb8";
+							image_msg.is_bigendian = 1;
+							image_msg.step = img->h * 4;
+							//image_msg.data = &(image_data[0]);
+							pub_image.publish(image_msg);
 					
 							// Display the image in the (supported) converted format. 
 							Display_Image( displayContext->View, displayContext->depth, img->w, img->h, displayContext->convertBuffer );				

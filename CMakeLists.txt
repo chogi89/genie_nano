@@ -6,12 +6,21 @@ add_definitions(-std=c++1y)
 find_package(catkin REQUIRED COMPONENTS
     roscpp
     std_msgs
+    sensor_msgs
+    cv_bridge
+    image_transport
 )
+find_package( OpenCV REQUIRED )
 
 catkin_package(
+  INCLUDE_DIRS DEPENDS
+    OpenCV
   CATKIN_DEPENDS
     roscpp
     std_msgs
+    cv_bridge
+    sensor_msgs
+    image_transport
 )
 
 include_directories(
