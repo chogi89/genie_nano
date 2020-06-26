@@ -10,7 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
     cv_bridge
     image_transport
 )
-find_package( OpenCV REQUIRED )
+find_package( OpenCV REQUIRED)
 
 catkin_package(
   INCLUDE_DIRS DEPENDS
@@ -18,8 +18,8 @@ catkin_package(
   CATKIN_DEPENDS
     roscpp
     std_msgs
-    cv_bridge
     sensor_msgs
+    cv_bridge
     image_transport
 )
 
@@ -146,4 +146,24 @@ target_link_libraries(test_cam
                       X_Display_utils 
                       FileUtil_tiff 
                       GevUtils)
-#add_dependencies(test_cam genie_nano_generate_messages_cpp)
+add_dependencies(test_cam genie_nano_generate_messages_cpp)
+
+
+#add_executable(test src/test.cpp)
+#target_link_libraries(test 
+#                      ${catkin_LIBRARIES} 
+#                      ${OpenCV_LIBRARIES} 
+#                      /opt/genicam_v3_0/bin/Linux64_ARM/libGenApi_gcc54_v3_0.so
+#                      /opt/genicam_v3_0/bin/Linux64_ARM/libGCBase_gcc54_v3_0.so
+#                      /usr/local/lib/libGevApi.so
+#                      /usr/local/lib/libCorW32.so
+#                      /usr/lib/aarch64-linux-gnu/libX11.so
+#                      /usr/lib/aarch64-linux-gnu/libXext.so
+#                      /usr/lib/aarch64-linux-gnu/libpthread.so
+#                      /usr/lib/aarch64-linux-gnu/libstdc++.so.6
+#                      convertBayer 
+#                      GevFileUtils 
+#                      X_Display_utils 
+#                      FileUtil_tiff 
+#                      GevUtils)
+#add_dependencies(test genie_nano_generate_messages_cpp)

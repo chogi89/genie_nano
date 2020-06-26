@@ -9,11 +9,18 @@
 
 #include "ros/ros.h"
 
-#include <cv_bridge/cv_bridge.h>
-#include <image_transport/image_transport.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/image_encodings.h>
 #include <sensor_msgs/CameraInfo.h>
+
+#include <opencv2/video/tracking.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core/core.hpp>
+#include <opencv2/core/mat.hpp>
+#include <opencv2/features2d.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/videoio/videoio.hpp>
 
 #define LOOP_TIME   			0.1
 
@@ -27,6 +34,7 @@
 
 
 using namespace std;
+using namespace cv;
 
 typedef struct tagMY_CONTEXT
 {
@@ -44,6 +52,7 @@ typedef struct tagMY_CONTEXT
 // ---------------------- //
 
 void *m_latestBuffer = NULL;
+int img_count = 0;
 
 // ----------------------- //
 // -- General Functions -- //
@@ -255,9 +264,10 @@ int main (int argc, char **argv){
 					while(ros::ok()){
 						ros::spinOnce();
 						loop_rate.sleep();
-						cout << sizeof(context.format) << endl;
 						count = count + LOOP_TIME;
-						cout << count << endl;
+						//cout << count << endl;
+						
+
 					}
 					
 					GevStopTransfer(handle);
@@ -339,24 +349,44 @@ void * ImageDisplayThread( void *context){
 							int gev_depth = GevGetPixelDepthInBits(img->format);
 							// Convert the image to a displayable format.
 							//(Note : Not all formats can be displayed properly at this time (planar, YUV*, 10/12 bit packed).
+							//ConvertGevImageToX11Format( img->w, img->h, gev_depth, img->format, img->address, \
+													displayContext->depth, displayContext->format, displayContext->convertBuffer);
 							ConvertGevImageToX11Format( img->w, img->h, gev_depth, img->format, img->address, \
 													displayContext->depth, displayContext->format, displayContext->convertBuffer);
 							void* temp = displayContext->convertBuffer;
-							unsigned char* image_data = (unsigned char*)displayContext->convertBuffer;;
-							cout << (int)(image_data[0]) << ", " << (int)(image_data[1]) << endl;
-							//cout << image_data[0];
+							int img_width = img->w;
+							int img_height = img->h;
+							int img_size = img_width * img_height;
+							unsigned char* image_data = new unsigned char[img_size*4];
+							unsigned char* image_data_ptr = (unsigned char*) displayContext->convertBuffer;
 							
+							image_data = image_data_ptr;
+							/*for(int i=0; i<img_size*4; i++){
+								image_data[i] = image_data_ptr[i];
+							}*/
+
 							sensor_msgs::Image image_msg;
 							image_msg.height = img->h;
 							image_msg.width = img->w;
-							image_msg.encoding = "bayer_rggb8";
+							image_msg.encoding = "8UC4";
 							image_msg.is_bigendian = 1;
 							image_msg.step = img->h * 4;
-							//image_msg.data = &(image_data[0]);
+							//vector<unsigned char> temp(image_data_ptr, image_data + sizeof(image_data) / sizeof (image_data[0]));
+							//for(int i=0; i<img_size*4; i++){
+							//	image_msg.data.push_back(image_data[i]);
+							//}
+							//image_msg.data.push_back(temp);
 							pub_image.publish(image_msg);
-					
+							
 							// Display the image in the (supported) converted format. 
-							Display_Image( displayContext->View, displayContext->depth, img->w, img->h, displayContext->convertBuffer );				
+							Display_Image( displayContext->View, displayContext->depth, img->w, img->h, displayContext->convertBuffer );
+							Mat matrix_img = Mat(img_height, img_width, CV_8UC4, image_data);
+
+							stringstream file;
+							file << "image" << img_count << ".bmp";
+							string filename = file.str();
+							cv::imwrite(filename, matrix_img);
+							img_count++;
 						}
 						else
 						{
