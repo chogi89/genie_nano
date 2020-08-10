@@ -27,17 +27,13 @@
 #define MAX_NETIF				8
 #define MAX_CAMERAS_PER_NETIF	32
 #define MAX_CAMERAS				(MAX_NETIF * MAX_CAMERAS_PER_NETIF)
-
 #define NUM_BUF					32
-
 #define ENABLE_BAYER_CONVERSION 1
-
 
 using namespace std;
 using namespace cv;
 
-typedef struct tagMY_CONTEXT
-{
+typedef struct tagMY_CONTEXT{
 	X_VIEW_HANDLE		View;
 	GEV_CAMERA_HANDLE	camHandle;
 	int					depth;
@@ -63,11 +59,6 @@ void * ImageDisplayThread(void *context);
 static unsigned long us_timer_init(void);
 int IsTurboDriveAvailable(GEV_CAMERA_HANDLE handle);
 
-// ------------------------ //
-// -- Callback Functions -- //
-// ------------------------ //
-
-
 // ------------------- //
 // -- Main Function -- //
 // ------------------- //
@@ -76,7 +67,7 @@ int main (int argc, char **argv){
 	// ----------------- //
 	// -- ROS setting -- //
 	// ----------------- //
-	ros::init(argc, argv, "test_cam");
+	ros::init(argc, argv, "cam_node");
 	ros::NodeHandle nh;
 
 	ros::Rate loop_rate(1/LOOP_TIME);
@@ -140,7 +131,7 @@ int main (int argc, char **argv){
 			
 			// Open the camera.
 			status = GevOpenCamera( &pCamera[camIndex], GevExclusiveMode, &handle);
-			if (status == 0){
+			if(status == 0){
 				// GenICam feature access via Camera XML File enabled by "open"
 				// Get the name of XML file name back (example only - in case you need it somewhere).
 				char xmlFileName[MAX_PATH] = {0};
@@ -158,7 +149,7 @@ int main (int argc, char **argv){
 			snprintf(uniqueName, sizeof(uniqueName), "img_%06x", macLow); 
 			
 			// Go on to adjust some API related settings (for tuning / diagnostics / etc....).
-			if ( status == 0 ){
+			if(status == 0){
 				GEV_CAMERA_OPTIONS camOptions = {0};
 
 				// Adjust the camera interface options if desired (see the manual)
@@ -246,7 +237,7 @@ int main (int argc, char **argv){
 						context.convertFormat = FALSE;
 					}
 					
-					View = CreateDisplayWindow("GigE-V GenApi Console Demo", TRUE, height, width, pixDepth, pixFormat, FALSE ); 
+					//View = CreateDisplayWindow("GigE-V GenApi Console Demo", TRUE, height, width, pixDepth, pixFormat, FALSE ); 
 
 					// Create a thread to receive images from the API and display them.
 					context.View = View;
@@ -269,14 +260,13 @@ int main (int argc, char **argv){
 						
 
 					}
-					
 					GevStopTransfer(handle);
 					done = TRUE;
 					context.exit = TRUE;
 					pthread_join( tid, NULL);      
 					GevAbortTransfer(handle);
 					status = GevFreeTransfer(handle);
-					DestroyDisplayWindow(View);
+					//DestroyDisplayWindow(View);
 					for (i = 0; i < numBuffers; i++){	
 						free(bufAddress[i]);
 					}
@@ -319,33 +309,25 @@ void * ImageDisplayThread( void *context){
 	ros::NodeHandle nh;
 	ros::Publisher pub_image = nh.advertise<sensor_msgs::Image>("/genie_cam/image_raw",100);
 
-	if (displayContext != NULL)
-	{
-   	unsigned long prev_time = 0;
-   	//unsigned long cur_time = 0;
-		//unsigned long deltatime = 0;
+	if (displayContext != NULL){
+   		unsigned long prev_time = 0;
 		prev_time = us_timer_init();
 
 		// While we are still running.
-		while(!displayContext->exit)
-		{
+		while(!displayContext->exit){
 			GEV_BUFFER_OBJECT *img = NULL;
 			GEV_STATUS status = 0;
 	
 			// Wait for images to be received
 			status = GevWaitForNextImage(displayContext->camHandle, &img, 1000);
 
-			if ((img != NULL) && (status == GEVLIB_OK))
-			{
-				if (img->status == 0)
-				{
+			if ((img != NULL) && (status == GEVLIB_OK)){
+				if (img->status == 0){
 					m_latestBuffer = img->address;
 					// Can the acquired buffer be displayed?
-					if ( IsGevPixelTypeX11Displayable(img->format) || displayContext->convertFormat )
-					{
+					if ( IsGevPixelTypeX11Displayable(img->format) || displayContext->convertFormat ){
 						// Convert the image format if required.
-						if (displayContext->convertFormat)
-						{
+						if (displayContext->convertFormat){
 							int gev_depth = GevGetPixelDepthInBits(img->format);
 							// Convert the image to a displayable format.
 							//(Note : Not all formats can be displayed properly at this time (planar, YUV*, 10/12 bit packed).
@@ -357,67 +339,45 @@ void * ImageDisplayThread( void *context){
 							int img_width = img->w;
 							int img_height = img->h;
 							int img_size = img_width * img_height;
-							unsigned char* image_data = new unsigned char[img_size*4];
 							unsigned char* image_data_ptr = (unsigned char*) displayContext->convertBuffer;
 							
-							image_data = image_data_ptr;
-							/*for(int i=0; i<img_size*4; i++){
-								image_data[i] = image_data_ptr[i];
-							}*/
-
 							sensor_msgs::Image image_msg;
 							image_msg.height = img->h;
 							image_msg.width = img->w;
-							image_msg.encoding = "8UC4";
+							image_msg.encoding = "bgra8";
 							image_msg.is_bigendian = 1;
-							image_msg.step = img->h * 4;
-							//vector<unsigned char> temp(image_data_ptr, image_data + sizeof(image_data) / sizeof (image_data[0]));
-							//for(int i=0; i<img_size*4; i++){
-							//	image_msg.data.push_back(image_data[i]);
-							//}
-							//image_msg.data.push_back(temp);
+							image_msg.step = img->w * 4;
+							vector<unsigned char> temp_vec(image_data_ptr, image_data_ptr + image_msg.height*image_msg.width*4*sizeof(image_data_ptr[0]));
+							image_msg.data.assign(temp_vec.begin(), temp_vec.end());
 							pub_image.publish(image_msg);
-							
-							// Display the image in the (supported) converted format. 
-							Display_Image( displayContext->View, displayContext->depth, img->w, img->h, displayContext->convertBuffer );
-							Mat matrix_img = Mat(img_height, img_width, CV_8UC4, image_data);
 
-							stringstream file;
-							file << "image" << img_count << ".bmp";
-							string filename = file.str();
-							cv::imwrite(filename, matrix_img);
-							img_count++;
-						}
-						else
-						{
+							// Display the image in the (supported) converted format. 
+							//Display_Image( displayContext->View, displayContext->depth, img->w, img->h, displayContext->convertBuffer );
+							Mat matrix_img = Mat(img_height, img_width, CV_8UC4, image_data_ptr);							
+						}else{
 							// Display the image in the (supported) received format. 
-							Display_Image( displayContext->View, img->d,  img->w, img->h, img->address );
+							//Display_Image( displayContext->View, img->d,  img->w, img->h, img->address );
 						}
-					}
-					else
-					{
+					}else{
 						//printf("Not displayable\n");
 					}
-				}
-				else
-				{
+				}else{
 					// Image had an error (incomplete (timeout/overflow/lost)).
 					// Do any handling of this condition necessary.
 				}
 			}
 #if USE_SYNCHRONOUS_BUFFER_CYCLING
-			if (img != NULL)
-			{
+			if (img != NULL){
 				// Release the buffer back to the image transfer process.
 				GevReleaseImage( displayContext->camHandle, img);
 			}
 #endif
 		}
 	}
-	pthread_exit(0);	
+	pthread_exit(0);
 }
 
-static unsigned long us_timer_init( void ){
+static unsigned long us_timer_init(void){
    struct timeval tm;
    unsigned long msec;
    
@@ -432,14 +392,11 @@ int IsTurboDriveAvailable(GEV_CAMERA_HANDLE handle){
 	int type;
 	UINT32 val = 0;
 	
-	if ( 0 == GevGetFeatureValue( handle, "transferTurboCurrentlyAbailable",  &type, sizeof(UINT32), &val) )
-	{
+	if ( 0 == GevGetFeatureValue( handle, "transferTurboCurrentlyAbailable",  &type, sizeof(UINT32), &val) ){
 		// Current / Standard method present - this feature indicates if TurboMode is available.
 		// (Yes - it is spelled that odd way on purpose).
 		return (val != 0);
-	}
-	else
-	{
+	}else{
 		// Legacy mode check - standard feature is not there try it manually.
 		char pxlfmt_str[64] = {0};
 
@@ -447,15 +404,12 @@ int IsTurboDriveAvailable(GEV_CAMERA_HANDLE handle){
 		GevGetFeatureValueAsString( handle, "PixelFormat", &type, sizeof(pxlfmt_str), pxlfmt_str);
 
 		// Set the "turbo" capability selector for this format.
-		if ( 0 != GevSetFeatureValueAsString( handle, "transferTurboCapabilitySelector", pxlfmt_str) )
-		{
+		if ( 0 != GevSetFeatureValueAsString( handle, "transferTurboCapabilitySelector", pxlfmt_str) ){
 			// Either the capability selector is not present or the pixel format is not part of the 
 			// capability set.
 			// Either way - TurboMode is NOT AVAILABLE.....
 			return 0; 
-		}
-		else
-		{
+		}else{
 			// The capabilty set exists so TurboMode is AVAILABLE.
 			// It is up to the camera to send TurboMode data if it can - so we let it.
 			return 1;
@@ -463,7 +417,3 @@ int IsTurboDriveAvailable(GEV_CAMERA_HANDLE handle){
 	}
 	return 0;
 }
-
-// ------------------------ //
-// -- Callback Functions -- //
-// ------------------------ //

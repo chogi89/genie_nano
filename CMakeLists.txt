@@ -129,8 +129,8 @@ target_link_libraries(GevUtils
                       convertBayer)
 add_dependencies(GevUtils ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-add_executable(test_cam src/test_cam.cpp)
-target_link_libraries(test_cam 
+add_executable(cam_node src/cam_node.cpp)
+target_link_libraries(cam_node 
                       ${catkin_LIBRARIES} 
                       ${OpenCV_LIBRARIES} 
                       /opt/genicam_v3_0/bin/Linux64_ARM/libGenApi_gcc54_v3_0.so
@@ -146,24 +146,23 @@ target_link_libraries(test_cam
                       X_Display_utils 
                       FileUtil_tiff 
                       GevUtils)
-add_dependencies(test_cam genie_nano_generate_messages_cpp)
+add_dependencies(cam_node genie_nano_generate_messages_cpp)
 
-
-#add_executable(test src/test.cpp)
-#target_link_libraries(test 
-#                      ${catkin_LIBRARIES} 
-#                      ${OpenCV_LIBRARIES} 
-#                      /opt/genicam_v3_0/bin/Linux64_ARM/libGenApi_gcc54_v3_0.so
-#                      /opt/genicam_v3_0/bin/Linux64_ARM/libGCBase_gcc54_v3_0.so
-#                      /usr/local/lib/libGevApi.so
-#                      /usr/local/lib/libCorW32.so
-#                      /usr/lib/aarch64-linux-gnu/libX11.so
-#                      /usr/lib/aarch64-linux-gnu/libXext.so
-#                      /usr/lib/aarch64-linux-gnu/libpthread.so
-#                      /usr/lib/aarch64-linux-gnu/libstdc++.so.6
-#                      convertBayer 
-#                      GevFileUtils 
-#                      X_Display_utils 
-#                      FileUtil_tiff 
-#                      GevUtils)
-#add_dependencies(test genie_nano_generate_messages_cpp)
+add_executable(save_node src/save_node.cpp)
+target_link_libraries(save_node 
+                      ${catkin_LIBRARIES} 
+                      ${OpenCV_LIBRARIES} 
+                      /opt/genicam_v3_0/bin/Linux64_ARM/libGenApi_gcc54_v3_0.so
+                      /opt/genicam_v3_0/bin/Linux64_ARM/libGCBase_gcc54_v3_0.so
+                      /usr/local/lib/libGevApi.so
+                      /usr/local/lib/libCorW32.so
+                      /usr/lib/aarch64-linux-gnu/libX11.so
+                      /usr/lib/aarch64-linux-gnu/libXext.so
+                      /usr/lib/aarch64-linux-gnu/libpthread.so
+                      /usr/lib/aarch64-linux-gnu/libstdc++.so.6
+                      convertBayer 
+                      GevFileUtils 
+                      X_Display_utils 
+                      FileUtil_tiff 
+                      GevUtils)
+add_dependencies(save_node genie_nano_generate_messages_cpp)
