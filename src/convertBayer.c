@@ -73,25 +73,25 @@ static void _convBayer8ToRGB8_2x2( void* pSrcLine0, void* pSrcLine1, void* pDstR
 				case 0: // GB_RG
 					vR = ((uint32_t)pSrc1[0]); 
 					vB = ((uint32_t)pSrc0[1]);
-					vG = ((vR + vB + 1) >> 1);  
+					vG = (((uint32_t)pSrc0[0]) + ((uint32_t)pSrc1[1]))/2;
 					break;
 
 				case 1: // BG_GR
 					vR = ((uint32_t)pSrc1[1]);
 					vB = ((uint32_t)pSrc0[0]);
-					vG = ((vR + vB + 1) >> 1); 
+					vG = (((uint32_t)pSrc0[1]) + ((uint32_t)pSrc1[0]))/2;
 					break;
 
 				case 2: // RG_GB
 					vR = ((uint32_t)pSrc0[0]);
 					vB = ((uint32_t)pSrc1[1]);
-					vG = ((vR + vB + 1) >> 1); 
+					vG = (((uint32_t)pSrc0[1]) + ((uint32_t)pSrc1[0]))/2;
 					break;
 
 				case 3: // GR_BG
 					vR = ((uint32_t)pSrc0[1]);
 					vB = ((uint32_t)pSrc1[0]);
-					vG = ((vR + vB + 1) >> 1); 
+					vG = (((uint32_t)pSrc0[0]) + ((uint32_t)pSrc1[1]))/2;
 					break;
 			}
 
