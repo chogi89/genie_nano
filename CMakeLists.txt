@@ -166,3 +166,9 @@ target_link_libraries(save_node
                       FileUtil_tiff 
                       GevUtils)
 add_dependencies(save_node genie_nano_generate_messages_cpp)
+
+add_executable(save_cam_node src/save_cam_node.cpp)
+target_link_libraries(save_cam_node 
+                      ${catkin_LIBRARIES} 
+                      ${OpenCV_LIBRARIES})
+add_dependencies(save_cam_node genie_nano_generate_messages_cpp)

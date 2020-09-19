@@ -25,8 +25,8 @@
 using namespace std;
 using namespace cv;
 
-Mat mat_original = Mat(2064, 1544, CV_8UC4);        // Original image
-Mat mat_resized = Mat(516, 386, CV_8UC4);        // Original image
+Mat mat_original = Mat(1920, 1024, CV_8UC4);        // Original image
+Mat mat_resized = Mat(960, 512, CV_8UC4);        // Original image
 
 
 // ------------------------ //
@@ -43,9 +43,9 @@ int main (int argc, char **argv){
 	// ----------------- //
 	// -- ROS setting -- //
 	// ----------------- //
-	ros::init(argc, argv, "save_node");
+	ros::init(argc, argv, "save_cam_node");
 	ros::NodeHandle nh;
-    ros::Subscriber sub_image = nh.subscribe("/genie_cam/image_raw", 10, msgCallback_img);
+    ros::Subscriber sub_image = nh.subscribe("/usb_cam/image_raw", 10, msgCallback_img);
 
 	ros::Rate loop_rate(1/LOOP_TIME);
 
