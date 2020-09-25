@@ -54,10 +54,8 @@ int img_count = 0;
 // -- General Functions -- //
 // ----------------------- //
 
-char GetKey();
 void * ImageDisplayThread(void *context);
 static unsigned long us_timer_init(void);
-int IsTurboDriveAvailable(GEV_CAMERA_HANDLE handle);
 
 // ------------------- //
 // -- Main Function -- //
@@ -256,9 +254,6 @@ int main (int argc, char **argv){
 						ros::spinOnce();
 						loop_rate.sleep();
 						count = count + LOOP_TIME;
-						//cout << count << endl;
-						
-
 					}
 					GevStopTransfer(handle);
 					done = TRUE;
@@ -293,21 +288,11 @@ int main (int argc, char **argv){
 // ----------------------- //
 // -- General Functions -- //
 // ----------------------- //
-
-char GetKey(){
-   char key = getchar();
-   while ((key == '\r') || (key == '\n')){
-      key = getchar();
-   }
-   return key;
-}
-
-
 void * ImageDisplayThread( void *context){
 	MY_CONTEXT *displayContext = (MY_CONTEXT *)context;
 
 	ros::NodeHandle nh;
-	ros::Publisher pub_image = nh.advertise<sensor_msgs::Image>("/genie_cam/image_raw",100);
+	ros::Publisher pub_image = nh.advertise<sensor_msgs::Image>("/genie_cam/image_raw",10);
 
 	if (displayContext != NULL){
    		unsigned long prev_time = 0;
@@ -386,34 +371,4 @@ static unsigned long us_timer_init(void){
    
    msec = (tm.tv_sec * 1000000) + (tm.tv_usec);
    return msec;
-}
-
-int IsTurboDriveAvailable(GEV_CAMERA_HANDLE handle){
-	int type;
-	UINT32 val = 0;
-	
-	if ( 0 == GevGetFeatureValue( handle, "transferTurboCurrentlyAbailable",  &type, sizeof(UINT32), &val) ){
-		// Current / Standard method present - this feature indicates if TurboMode is available.
-		// (Yes - it is spelled that odd way on purpose).
-		return (val != 0);
-	}else{
-		// Legacy mode check - standard feature is not there try it manually.
-		char pxlfmt_str[64] = {0};
-
-		// Mandatory feature (always present).
-		GevGetFeatureValueAsString( handle, "PixelFormat", &type, sizeof(pxlfmt_str), pxlfmt_str);
-
-		// Set the "turbo" capability selector for this format.
-		if ( 0 != GevSetFeatureValueAsString( handle, "transferTurboCapabilitySelector", pxlfmt_str) ){
-			// Either the capability selector is not present or the pixel format is not part of the 
-			// capability set.
-			// Either way - TurboMode is NOT AVAILABLE.....
-			return 0; 
-		}else{
-			// The capabilty set exists so TurboMode is AVAILABLE.
-			// It is up to the camera to send TurboMode data if it can - so we let it.
-			return 1;
-		}
-	}
-	return 0;
 }
