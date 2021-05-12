@@ -25,7 +25,7 @@
 using namespace std;
 using namespace cv;
 
-Mat mat_original = Mat(2064, 1544, CV_8UC4);        // Original image
+Mat mat_original = Mat(2048, 1536, CV_8UC4);        // Original image
 Mat mat_resized = Mat(516, 386, CV_8UC4);        // Original image
 
 
@@ -54,7 +54,7 @@ int main (int argc, char **argv){
     int img_count = 0;
 
     while(ros::ok()){
-	resize(mat_original, mat_resized, Size(516, 386), 0, 0, INTER_LINEAR);
+	resize(mat_original, mat_resized, Size(2048, 1536), 0, 0, INTER_LINEAR);
         stringstream file;
         file << "image" << img_count << ".bmp";
         string filename = file.str();
